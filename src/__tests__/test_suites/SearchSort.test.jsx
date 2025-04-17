@@ -1,5 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act } from 'react' // Updated import from react instead of react-dom/test-utils
 import AccountContainer from '../../components/AccountContainer'
 import Search from '../../components/Search'
 import Sort from '../../components/Sort'
@@ -62,7 +63,9 @@ describe('AccountContainer Search Functionality', () => {
         render(<AccountContainer />)
 
         // Wait for transactions to load
-        await screen.findByText('Coffee Shop')
+        await waitFor(() => {
+            expect(screen.getByText('Coffee Shop')).toBeInTheDocument()
+        })
 
         // Verify all transactions are initially displayed
         expect(screen.getByText('Coffee Shop')).toBeInTheDocument()
@@ -70,29 +73,39 @@ describe('AccountContainer Search Functionality', () => {
         expect(screen.getByText('Movie Tickets')).toBeInTheDocument()
 
         // Enter search term
-        const searchInput = screen.getByPlaceholderText('Search your Recent Transactions')
-        fireEvent.change(searchInput, { target: { value: 'Coffee' } })
+        await act(async () => {
+            const searchInput = screen.getByPlaceholderText('Search your Recent Transactions')
+            fireEvent.change(searchInput, { target: { value: 'Coffee' } })
+        })
 
         // Check that only matching transactions are displayed
-        expect(screen.getByText('Coffee Shop')).toBeInTheDocument()
-        expect(screen.queryByText('Grocery Store')).not.toBeInTheDocument()
-        expect(screen.queryByText('Movie Tickets')).not.toBeInTheDocument()
+        await waitFor(() => {
+            expect(screen.getByText('Coffee Shop')).toBeInTheDocument()
+            expect(screen.queryByText('Grocery Store')).not.toBeInTheDocument()
+            expect(screen.queryByText('Movie Tickets')).not.toBeInTheDocument()
+        })
     })
 
     test('filters transactions based on category', async () => {
         render(<AccountContainer />)
 
         // Wait for transactions to load
-        await screen.findByText('Coffee Shop')
+        await waitFor(() => {
+            expect(screen.getByText('Coffee Shop')).toBeInTheDocument()
+        })
 
         // Enter search term to filter by category
-        const searchInput = screen.getByPlaceholderText('Search your Recent Transactions')
-        fireEvent.change(searchInput, { target: { value: 'Food' } })
+        await act(async () => {
+            const searchInput = screen.getByPlaceholderText('Search your Recent Transactions')
+            fireEvent.change(searchInput, { target: { value: 'Food' } })
+        })
 
         // Check that only food category transactions are displayed
-        expect(screen.getByText('Coffee Shop')).toBeInTheDocument()
-        expect(screen.getByText('Grocery Store')).toBeInTheDocument()
-        expect(screen.queryByText('Movie Tickets')).not.toBeInTheDocument()
+        await waitFor(() => {
+            expect(screen.getByText('Coffee Shop')).toBeInTheDocument()
+            expect(screen.getByText('Grocery Store')).toBeInTheDocument()
+            expect(screen.queryByText('Movie Tickets')).not.toBeInTheDocument()
+        })
     })
 })
 
@@ -106,37 +119,51 @@ describe('AccountContainer Sort Functionality', () => {
         render(<AccountContainer />)
 
         // Wait for transactions to load
-        await screen.findByText('Coffee Shop')
-
-        // Change the sort to description
-        const sortSelect = screen.getByRole('combobox')
-        fireEvent.change(sortSelect, { target: { value: 'description' } })
-
-        // Get all transaction descriptions
-        const descriptions = screen.getAllByRole('row').slice(1).map(row => {
-            return row.cells[1].textContent
+        await waitFor(() => {
+            expect(screen.getByText('Coffee Shop')).toBeInTheDocument()
         })
 
-        // Check if sorted alphabetically by description
-        expect(descriptions).toEqual(['Coffee Shop', 'Grocery Store', 'Movie Tickets'])
+        // Change the sort to description
+        await act(async () => {
+            const sortSelect = screen.getByRole('combobox')
+            fireEvent.change(sortSelect, { target: { value: 'description' } })
+        })
+
+        // Get all transaction descriptions
+        await waitFor(() => {
+            const rows = screen.getAllByRole('row')
+            // Skip the header row
+            const transactionRows = rows.slice(1)
+            const descriptions = transactionRows.map(row => row.cells[1].textContent)
+
+            // Check if sorted alphabetically by description
+            expect(descriptions).toEqual(['Coffee Shop', 'Grocery Store', 'Movie Tickets'])
+        })
     })
 
     test('sorts transactions by category', async () => {
         render(<AccountContainer />)
 
         // Wait for transactions to load
-        await screen.findByText('Coffee Shop')
-
-        // Change the sort to category
-        const sortSelect = screen.getByRole('combobox')
-        fireEvent.change(sortSelect, { target: { value: 'category' } })
-
-        // Get all transaction categories
-        const categories = screen.getAllByRole('row').slice(1).map(row => {
-            return row.cells[2].textContent
+        await waitFor(() => {
+            expect(screen.getByText('Coffee Shop')).toBeInTheDocument()
         })
 
-        // Check if sorted alphabetically by category
-        expect(categories).toEqual(['Entertainment', 'Food', 'Food'])
+        // Change the sort to category
+        await act(async () => {
+            const sortSelect = screen.getByRole('combobox')
+            fireEvent.change(sortSelect, { target: { value: 'category' } })
+        })
+
+        // Get all transaction categories
+        await waitFor(() => {
+            const rows = screen.getAllByRole('row')
+            // Skip the header row
+            const transactionRows = rows.slice(1)
+            const categories = transactionRows.map(row => row.cells[2].textContent)
+
+            // Check if sorted alphabetically by category
+            expect(categories).toEqual(['Entertainment', 'Food', 'Food'])
+        })
     })
 })
